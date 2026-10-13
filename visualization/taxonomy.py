@@ -74,6 +74,20 @@ class VisualizationTaxonomy:
                 data_source=series,
                 metadata={"dimension": series.dimension_name, "metric": series.metric_name, "unit": series.unit}
             )
+
+        # Rule 1.5: Temporal sequence -> Line Trend Chart
+        import re
+        dim_clean = series.dimension_name.lower().strip()
+        is_temporal_dim = bool(re.search(r'\b(year|quarter|month|fiscal|fy|period|trend)\b', dim_clean))
+        all_temporal_labels = all(bool(re.search(r'^(?:20\d\d|19\d\d|fy\s*\d\d|q[1-4]|h[1-2])\b', it.label.lower().strip())) for it in series.items)
+        if (is_temporal_dim or all_temporal_labels) and n_items >= 2:
+            return ChartCandidate(
+                candidate_id=f"chart_{series.id}",
+                chart_type=ChartType.LINE_TREND,
+                title=f"{series.metric_name} Trend over {series.dimension_name}",
+                data_source=series,
+                metadata={"dimension": series.dimension_name, "metric": series.metric_name, "unit": series.unit}
+            )
             
         # Rule 2: If items have long labels or > 4 items -> Horizontal Bar
         avg_label_len = sum(len(it.label) for it in series.items) / max(1, n_items)

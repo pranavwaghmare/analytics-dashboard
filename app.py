@@ -108,7 +108,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-def process_document(file_path: str, api_key: str = None, doc_title: str = None, model_name: str = "llama-3.1-8b-instant"):
+def process_document(file_path: str, api_key: str = None, doc_title: str = None, model_name: str = "openai/gpt-oss-120b"):
     """Executes the full pipeline: Ingestion -> Extraction -> Grounding -> Analytics -> Visualization."""
     with st.spinner("1/4 Ingesting document and extracting structural elements..."):
         doc_tree = DocumentParser.parse(file_path, original_title=doc_title)
@@ -141,18 +141,16 @@ def main():
         "Groq API Key (Optional)",
         type="password",
         value=os.environ.get("GROQ_API_KEY", ""),
-        help="Optional: Enter a Groq API key (free at console.groq.com) for ultra-fast Llama 3.1 8B / 3.3 70B reasoning. The system operates fully offline via deterministic parsing if omitted."
+        help="Optional: Enter a Groq API key (free at console.groq.com) for reasoning with openai/gpt-oss-120b. The system operates fully offline via deterministic parsing if omitted."
     )
     
     groq_model = st.sidebar.selectbox(
         "Groq Model",
         options=[
-            "llama-3.1-8b-instant",
-            "llama-3.3-70b-versatile",
             "openai/gpt-oss-120b"
         ],
         index=0,
-        help="llama-3.1-8b-instant has high rate limits (14,400 RPD, 500,000 TPD). The pipeline automatically falls back to 8B if another model is unavailable on your key."
+        help="Groq inference using openai/gpt-oss-120b."
     )
     
     extraction_mode = f"⚡ Groq ({groq_model}) + Grounding Gateway" if groq_key else "🛡️ Deterministic Heuristic + Grounding Gateway"
@@ -266,23 +264,45 @@ def main():
 
     # 2. Automated Visualizations Grid
     if recommended_charts:
-        st.markdown("### 📊 Automatically Generated Visualizations")
+        st.markdown("### 📊 Interactive Visualizations")
         chart_cols = st.columns(2)
+        
+        CHART_BADGES = {
+            "donut": ("🍩 Composition", "#4F46E5", "rgba(79, 70, 229, 0.1)"),
+            "bar_horizontal": ("📊 Ranking & Breakdown", "#0284C7", "rgba(2, 132, 199, 0.1)"),
+            "bar_vertical": ("📊 Distribution", "#0F766E", "rgba(15, 118, 110, 0.1)"),
+            "comparison_bar": ("🔄 Variance & Comparison", "#10B981", "rgba(16, 185, 129, 0.1)"),
+            "line_trend": ("📈 Historical Trend", "#8B5CF6", "rgba(139, 92, 246, 0.1)")
+        }
         
         for idx, cand in enumerate(recommended_charts):
             col_target = chart_cols[idx % 2]
             with col_target:
-                fig = ChartFactory.render_chart(cand)
-                try:
-                    st.plotly_chart(fig, width="stretch")
-                except TypeError:
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                # Provenance disclosure
-                prov = cand.data_source.provenance
-                grounding = cand.data_source.grounding
-                with st.expander(f"🔍 Inspect Grounding for: {cand.title}"):
-                    st.markdown(render_provenance_badge_html(prov, grounding), unsafe_allow_html=True)
+                with st.container(border=True):
+                    c_type_val = cand.chart_type.value if hasattr(cand.chart_type, 'value') else str(cand.chart_type)
+                    badge_label, b_color, b_bg = CHART_BADGES.get(c_type_val, ("📊 Analytics", "#0284C7", "rgba(2, 132, 199, 0.1)"))
+                    
+                    prov = cand.data_source.provenance
+                    grounding = cand.data_source.grounding
+                    
+                    st.markdown(
+                        f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">'
+                        f'<span style="font-size:11px; font-weight:700; color:{b_color}; background:{b_bg}; padding:3px 9px; border-radius:12px; text-transform:uppercase; letter-spacing:0.4px;">{badge_label}</span>'
+                        f'<span style="font-size:11px; color:#64748B;">✓ Grounded · Page {prov.page_number}</span>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                    
+                    fig = ChartFactory.render_chart(cand)
+                    chart_config = {"displayModeBar": False, "responsive": True}
+                    try:
+                        st.plotly_chart(fig, width="stretch", config=chart_config)
+                    except TypeError:
+                        st.plotly_chart(fig, use_container_width=True, config=chart_config)
+                    
+                    # Provenance disclosure
+                    with st.expander("🔍 Inspect Grounding Span & Confidence"):
+                        st.markdown(render_provenance_badge_html(prov, grounding), unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
 
     # 3. Key Insights & Relationships

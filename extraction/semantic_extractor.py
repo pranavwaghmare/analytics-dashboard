@@ -136,7 +136,7 @@ class SemanticExtractor:
     @classmethod
     def extract(
         cls, doc_tree: Dict[str, Any], api_key: Optional[str] = None,
-        provider: str = "groq", model_name: str = "llama-3.1-8b-instant"
+        provider: str = "groq", model_name: str = "openai/gpt-oss-120b"
     ) -> DocumentAnalyticsModel:
         """
         Executes semantic extraction:
@@ -181,41 +181,24 @@ class SemanticExtractor:
     @classmethod
     def _augment_with_groq(
         cls, doc_tree: Dict[str, Any], base_model: DocumentAnalyticsModel,
-        api_key: str, model_name: str = "llama-3.1-8b-instant"
+        api_key: str, model_name: str = "openai/gpt-oss-120b"
     ) -> DocumentAnalyticsModel:
-        """Invokes Groq API with strict JSON mode, safe TPM window, and automatic model fallback."""
+        """Invokes Groq API with strict JSON mode and safe TPM window."""
         from groq import Groq
         client = Groq(api_key=api_key)
         
         prompt_text = f"Document Text:\n{select_dense_document_text(doc_tree, max_chars=14000)}"
-        target_model = model_name or "llama-3.1-8b-instant"
+        target_model = model_name or "openai/gpt-oss-120b"
         
-        try:
-            completion = client.chat.completions.create(
-                model=target_model,
-                messages=[
-                    {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt_text}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.0
-            )
-        except Exception as e:
-            err_str = str(e).lower()
-            if ("model_not_found" in err_str or "does not exist" in err_str or "404" in err_str) and target_model != "llama-3.1-8b-instant":
-                logger.info(f"Model {target_model} not found, retrying with llama-3.1-8b-instant...")
-                target_model = "llama-3.1-8b-instant"
-                completion = client.chat.completions.create(
-                    model=target_model,
-                    messages=[
-                        {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
-                        {"role": "user", "content": prompt_text}
-                    ],
-                    response_format={"type": "json_object"},
-                    temperature=0.0
-                )
-            else:
-                raise e
+        completion = client.chat.completions.create(
+            model=target_model,
+            messages=[
+                {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt_text}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.0
+        )
                 
         base_model.extraction_metadata["llm_model"] = target_model
         raw_json = completion.choices[0].message.content.strip()

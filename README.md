@@ -12,7 +12,7 @@ The **Intelligent Formal Document → Analytics Dashboard** is an end-to-end Pyt
 It bridges the gap between static documents and business intelligence:
 - **Zero manual schema mapping**: Automatically identifies KPIs, tables, comparative metrics, and trend series.
 - **Anti-Hallucination Grounding Gateway**: Links every single extracted metric directly back to verbatim source text spans with confidence scoring and page citations.
-- **Hybrid Extraction Engine**: Leverages high-throughput Groq LLM inference (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) with a 100% offline, deterministic heuristic fallback.
+- **Hybrid Extraction Engine**: Leverages Groq LLM inference (`openai/gpt-oss-120b`) with a 100% offline, deterministic heuristic fallback.
 - **Automated Visualization Engine**: Intelligently recommends and renders interactive Plotly figures based on underlying data shapes and analytical relevance.
 
 ---
@@ -169,7 +169,7 @@ The application will launch locally at `http://localhost:8501`.
    - Drag & drop your own **PDF**, **DOCX**, **XLSX**, or **CSV** file into the uploader.
 2. **Configure Engine Settings** (Sidebar):
    - Provide a Groq API key or leave blank for offline deterministic mode.
-   - Select the desired model (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`, etc.).
+   - Select the model (`openai/gpt-oss-120b`).
 3. **Inspect the Generated Dashboard**:
    - **Executive Summary & Metadata**: Domain classification and detected reporting periods.
    - **Hero KPI Cards**: Click **🔍 Source Span** on any card to view the exact sentence and page it was derived from.
